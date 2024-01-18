@@ -1,0 +1,64 @@
+[gd_scene load_steps=5 format=3 uid="uid://bal7rcvrj1gqt"]
+
+[ext_resource type="Shader" path="res://main.gdshader" id="1_by8e0"]
+[ext_resource type="Texture2D" uid="uid://clnaofsbhnb5b" path="res://icon.svg" id="2_fwiv5"]
+[ext_resource type="Script" path="res://Sprite2D.cs" id="3_gjxuh"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cgtm4"]
+shader = ExtResource("1_by8e0")
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_cgtm4")
+position = Vector2(512, 512)
+texture = ExtResource("2_fwiv5")
+script = ExtResource("3_gjxuh")
+
+[node name="ParticleSizeSlider" type="HSlider" parent="."]
+offset_left = 155.0
+offset_top = 133.0
+offset_right = 332.0
+offset_bottom = 161.0
+max_value = 0.02
+step = 0.001
+value = 0.01
+
+[node name="DiffuseRateSlider" type="HSlider" parent="."]
+offset_left = 155.0
+offset_top = 80.0
+offset_right = 332.0
+offset_bottom = 108.0
+max_value = 2.0
+step = 0.1
+value = 1.0
+
+[node name="SpeedSlider" type="HSlider" parent="."]
+offset_left = 155.0
+offset_top = 22.0
+offset_right = 332.0
+offset_bottom = 50.0
+max_value = 0.3
+step = 0.05
+value = 0.15
+
+[node name="Label3" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 133.0
+offset_right = 116.0
+offset_bottom = 156.0
+text = "Particle size"
+
+[node name="Label2" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 115.0
+offset_bottom = 103.0
+text = "Diffuse rate"
+
+[node name="Label" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 22.0
+offset_right = 72.0
+offset_bottom = 45.0
+text = "Speed"
