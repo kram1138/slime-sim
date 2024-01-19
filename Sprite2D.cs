@@ -120,7 +120,7 @@ public static class ComputeUtils
 public class FrameBuffer
 {
 	RenderingDevice rd;
-	int currentTexture = 0;
+	public int currentTexture = 0;
 
 	public Rid[] textures;
 
@@ -170,7 +170,8 @@ public class DataStage<T> where T : ComputeParams
 	{
 		this.rd = rd;
 		shader = ComputeUtils.CreateComputeShader(rd, ShaderPath);
-		dataBufferUniform = ComputeUtils.CreateBufferUniform(ComputeUtils.CreateBuffer(rd, startingBytes), dataBufferBinding);
+		dataBuffer = ComputeUtils.CreateBuffer(rd, startingBytes);
+		dataBufferUniform = ComputeUtils.CreateBufferUniform(dataBuffer, dataBufferBinding);
 
 		var paramBytes = initialParams.ToBytes();
 		var paramBuffer = ComputeUtils.CreateBuffer(rd, paramBytes);
@@ -190,7 +191,9 @@ public class DataStage<T> where T : ComputeParams
 		ComputeUtils.RunShader(rd, xGroups, yGroups, shader, uniformSet);
 	}
 
-	public RDUniform outputBuffer => dataBufferUniform;
+	public RDUniform outputBufferUniform => dataBufferUniform;
+
+	public Rid outputBuffer => dataBuffer;
 
 	public void Free()
 	{
@@ -298,11 +301,15 @@ struct Particle
 
 	public static Particle Random(Random rand)
 	{
-		var angle = (float)rand.NextDouble() * Mathf.Pi * 2;
+		var center = new Vector2(0.5f, 0.5f);
+		var position = new Vector2((float)rand.NextDouble() / 2 + 0.25f, (float)rand.NextDouble() / 2 + 0.25f);
+		// point to center
+		var angle = (center - position).Angle();
+		var velocity = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
 		return new Particle
 		{
-			Position = new Vector2((float)rand.NextDouble(), (float)rand.NextDouble()),
-			Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle))
+			Position = position,
+			Velocity = velocity
 		};
 	}
 
@@ -371,7 +378,7 @@ public partial class Sprite2D : Godot.Sprite2D
 {
 
 	int size = 1024;
-	int numParticles = 1024;
+	int numParticles = 262144;
 
 	static Random rand = new Random();
 	RenderingDevice rd;
@@ -458,7 +465,7 @@ public void RunSim(double delta)
 		SampleAngle = GetParent().GetNode<Slider>("SampleAngleSlider").Value
 	};
 
-	particleStage.RunStage(particleParams, (uint)numParticles / 16, 1, textureUniforms[0]);
+	particleStage.RunStage(particleParams, (uint)numParticles / 16, 1, textureUniforms[frameBuffer.currentTexture]);
 
 	// rd.Barrier(RenderingDevice.BarrierMask.Compute);
 
@@ -469,7 +476,7 @@ public void RunSim(double delta)
 		ParticleSize = GetParent().GetNode<Slider>("ParticleSizeSlider").Value
 	};
 
-	trailsStage.RunStage(trailsParams, (uint)size / 16, (uint)size / 16, particleStage.outputBuffer);
+	trailsStage.RunStage(trailsParams, (uint)size / 16, (uint)size / 16, particleStage.outputBufferUniform);
 
 	// rd.Barrier(RenderingDevice.BarrierMask.Compute);
 
@@ -482,6 +489,14 @@ public void RunSim(double delta)
 	diffuseStage.RunStage(diffuseParams, (uint)size / 16, (uint)size / 16);
 
 	(Texture as Texture2Drd).TextureRdRid = frameBuffer.outputTexture;
+
+	var particleBuffer = rd.BufferGetData(particleStage.outputBuffer);
+	var particles = Enumerable.Range(0, numParticles).Select(i => Particle.FromBuffer(particleBuffer, i)).ToArray();
+	(Material as ShaderMaterial).SetShaderParameter("position", particles[0].Position * 1024);
+	(Material as ShaderMaterial).SetShaderParameter("angle", particles[0].Velocity.Angle());
+	(Material as ShaderMaterial).SetShaderParameter("sampleRadius", GetParent().GetNode<Slider>("SampleRadiusSlider").Value);
+	(Material as ShaderMaterial).SetShaderParameter("sampleDistance", GetParent().GetNode<Slider>("SampleDistanceSlider").Value);
+	(Material as ShaderMaterial).SetShaderParameter("sampleAngle", GetParent().GetNode<Slider>("SampleAngleSlider").Value);
 }
 
 public void FreeSim()
